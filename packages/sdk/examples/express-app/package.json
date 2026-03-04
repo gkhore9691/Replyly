@@ -1,0 +1,13 @@
+{
+  "name": "replayly-express-example",
+  "private": true,
+  "version": "0.0.1",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "build": "echo 'No build step'"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}

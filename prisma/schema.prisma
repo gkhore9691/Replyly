@@ -1,0 +1,482 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String                  @id @default(cuid())
+  email                String                  @unique
+  passwordHash         String
+  name                 String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  memberships          OrganizationMember[]
+  projectMemberships   ProjectMember[]
+  apiKeys              ApiKey[]
+  githubIntegrations   GitHubIntegration[]
+  alertRules           AlertRule[]
+  invitationsCreated   Invitation[]            @relation("Inviter")
+  assignedIssues       ErrorGroupAssignment[]  @relation("AssignedIssues")
+  assignedByUser       ErrorGroupAssignment[]  @relation("AssignedByUser")
+  resolvedByUser       ErrorGroupAssignment[]  @relation("ResolvedByUser")
+  commentAuthor        Comment[]               @relation("CommentAuthor")
+  commentsMentioned    Comment[]               @relation("CommentMentions")
+  issueLinksCreated    IssueLink[]
+  activityLogs         ActivityLog[]
+  auditLogs            AuditLog[]
+  replayHistory        ReplayHistory[]
+
+  @@map("users")
+}
+
+model Organization {
+  id           String         @id @default(cuid())
+  name         String
+  slug         String         @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  members      OrganizationMember[]
+  projects     Project[]
+  invitations  Invitation[]
+  activityLogs ActivityLog[]
+  auditLogs    AuditLog[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  role           Role         @default(MEMBER)
+  userId         String
+  organizationId String
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@map("organization_members")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Project {
+  id                    String                   @id @default(cuid())
+  name                  String
+  slug                  String
+  organizationId        String
+  environment           String                   @default("production")
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  retentionDays         Int                      @default(30)
+  samplingRate          Float                    @default(1.0)
+  organization         Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members               ProjectMember[]
+  apiKeys               ApiKey[]
+  releases              Release[]
+  commits               Commit[]
+  githubIntegration     GitHubIntegration?
+  alertRules            AlertRule[]
+  notificationChannels  NotificationChannel[]
+  errorGroupAssignments ErrorGroupAssignment[]
+  comments              Comment[]
+  issueLinks            IssueLink[]
+  activityLogs          ActivityLog[]
+  integrations         Integration[]
+  invitations           Invitation[]
+  replayHistory         ReplayHistory[]
+
+  @@unique([organizationId, slug])
+  @@map("projects")
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  projectId  String
+  userId     String
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+model Release {
+  id          String   @id @default(cuid())
+  projectId   String
+  version     String
+  commitSha   String
+  branch      String?
+  author      String?
+  deployedAt  DateTime @default(now())
+  environment String   @default("production")
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, deployedAt])
+  @@map("releases")
+}
+
+model GitHubIntegration {
+  id              String   @id @default(cuid())
+  projectId       String
+  userId          String
+  accessToken     String
+  githubUserId    Int
+  githubUsername  String
+  githubRepoId    Int?
+  githubRepoName  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId])
+  @@map("github_integrations")
+}
+
+model Commit {
+  id        String   @id @default(cuid())
+  projectId String
+  sha       String
+  message   String
+  author    String
+  timestamp DateTime
+  url       String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sha])
+  @@index([projectId, timestamp])
+  @@map("commits")
+}
+
+model DailyStats {
+  id            String   @id @default(cuid())
+  projectId     String
+  date          DateTime @db.Date
+  totalEvents   Int      @default(0)
+  errorEvents   Int      @default(0)
+  avgDurationMs Float    @default(0)
+  p95DurationMs Float    @default(0)
+  p99DurationMs Float    @default(0)
+
+  @@unique([projectId, date])
+  @@index([projectId, date])
+  @@map("daily_stats")
+}
+
+model AlertRule {
+  id              String         @id @default(cuid())
+  projectId       String
+  name            String
+  description     String?
+  enabled         Boolean        @default(true)
+  conditions      Json
+  channels        AlertChannel[]
+  throttleMinutes Int            @default(5)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  createdBy       String
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [createdBy], references: [id])
+  history         AlertHistory[]
+
+  @@index([projectId, enabled])
+  @@map("alert_rules")
+}
+
+model AlertChannel {
+  id        String    @id @default(cuid())
+  ruleId    String
+  type      String
+  config    Json
+  enabled   Boolean   @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rule      AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@map("alert_channels")
+}
+
+model AlertHistory {
+  id                  String    @id @default(cuid())
+  ruleId              String
+  triggeredAt         DateTime  @default(now())
+  condition           String
+  value               Float
+  threshold           Float
+  notificationsSent  Int       @default(0)
+  notificationsFailed Int      @default(0)
+  acknowledgedAt     DateTime?
+  acknowledgedBy     String?
+  resolvedAt         DateTime?
+  resolvedBy         String?
+  rule                AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, triggeredAt])
+  @@index([acknowledgedAt])
+  @@map("alert_history")
+}
+
+model NotificationChannel {
+  id        String   @id @default(cuid())
+  projectId String
+  type      String
+  name      String
+  config    Json
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type])
+  @@map("notification_channels")
+}
+
+enum ProjectRole {
+  ADMIN
+  DEVELOPER
+  VIEWER
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  userId    String
+  role      ProjectRole @default(VIEWER)
+  createdAt DateTime    @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model Invitation {
+  id             String         @id @default(cuid())
+  email          String
+  organizationId String?
+  projectId      String?
+  role           String
+  token          String         @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  createdBy      String
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inviter      User          @relation("Inviter", fields: [createdBy], references: [id])
+
+  @@index([email])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("invitations")
+}
+
+model Integration {
+  id        String   @id @default(cuid())
+  projectId String
+  provider  String
+  enabled   Boolean  @default(true)
+  config    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+  @@map("integrations")
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  IGNORED
+}
+
+model ErrorGroupAssignment {
+  id         String      @id @default(cuid())
+  projectId  String
+  errorHash  String
+  assigneeId String
+  status     IssueStatus @default(OPEN)
+  assignedAt DateTime   @default(now())
+  assignedBy String
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee User    @relation("AssignedIssues", fields: [assigneeId], references: [id])
+  assigner User    @relation("AssignedByUser", fields: [assignedBy], references: [id])
+  resolver User?   @relation("ResolvedByUser", fields: [resolvedBy], references: [id])
+
+  @@unique([projectId, errorHash])
+  @@index([assigneeId])
+  @@index([status])
+  @@map("error_group_assignments")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  projectId String
+  errorHash String?
+  eventId   String?
+  content   String   @db.Text
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  attachments Json?
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author   User    @relation("CommentAuthor", fields: [authorId], references: [id])
+  mentions User[]  @relation("CommentMentions")
+
+  @@index([projectId, errorHash])
+  @@index([projectId, eventId])
+  @@index([authorId])
+  @@map("comments")
+}
+
+model IssueLink {
+  id          String   @id @default(cuid())
+  projectId   String
+  errorHash   String
+  provider    String
+  externalId  String
+  externalUrl String
+  createdAt   DateTime @default(now())
+  createdBy   String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator User    @relation(fields: [createdBy], references: [id])
+
+  @@unique([projectId, errorHash, provider])
+  @@index([projectId, errorHash])
+  @@map("issue_links")
+}
+
+enum ActivityType {
+  EVENT_VIEWED
+  ERROR_ASSIGNED
+  ERROR_RESOLVED
+  COMMENT_CREATED
+  ISSUE_LINKED
+  ALERT_TRIGGERED
+  RELEASE_DEPLOYED
+  MEMBER_INVITED
+  MEMBER_JOINED
+  SETTINGS_UPDATED
+}
+
+model ActivityLog {
+  id             String       @id @default(cuid())
+  projectId      String?
+  organizationId String?
+  userId         String
+  type           ActivityType
+  metadata       Json
+  createdAt      DateTime     @default(now())
+
+  project      Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id])
+
+  @@index([projectId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([userId])
+  @@map("activity_logs")
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  action         String
+  resource       String
+  resourceId     String?
+  metadata       Json
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model EventMock {
+  id         String   @id @default(cuid())
+  eventId    String
+  projectId  String
+  mockType   String   // 'external_api', 'database', 'redis'
+  identifier String   // URL, query, or key
+  request    Json?
+  response   Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([projectId, mockType])
+  @@map("event_mocks")
+}
+
+model ReplayHistory {
+  id        String   @id @default(cuid())
+  eventId   String
+  projectId String
+  userId    String
+  mode      String   // hybrid, mock, dry-run, snapshot
+  success   Boolean
+  duration  Int      // ms
+  differences Json?
+  error     String?
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([eventId])
+  @@index([projectId, createdAt])
+  @@index([userId])
+  @@map("replay_history")
+}
+
+model Snapshot {
+  id        String   @id @default(cuid())
+  eventId   String
+  projectId String
+  database  String   // 'postgres' | 'mongodb'
+  tables    Json
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([projectId, createdAt])
+  @@map("snapshots")
+}
+
+

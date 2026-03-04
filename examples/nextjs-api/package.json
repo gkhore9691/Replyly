@@ -1,0 +1,19 @@
+{
+  "name": "replayly-example-nextjs-api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 4001",
+    "build": "next build",
+    "start": "next start -p 4001"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@replayly/sdk": "file:../../packages/sdk"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

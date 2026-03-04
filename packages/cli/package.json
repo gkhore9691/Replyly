@@ -1,0 +1,33 @@
+{
+  "name": "@replayly/cli",
+  "version": "0.1.0",
+  "description": "Replayly CLI for replaying production requests locally",
+  "main": "dist/index.js",
+  "bin": {
+    "replayly": "./bin/replayly.js"
+  },
+  "files": ["dist", "bin"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "axios": "^1.6.8",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1",
+    "inquirer": "^8.2.6",
+    "cli-table3": "^0.6.3",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/inquirer": "^8.2.10",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

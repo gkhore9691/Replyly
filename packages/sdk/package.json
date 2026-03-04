@@ -1,0 +1,34 @@
+{
+  "name": "@replayly/sdk",
+  "version": "0.1.0",
+  "description": "Replayly SDK for capturing production request lifecycles",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "express": "^4.x",
+    "mongodb": "^6.x",
+    "ioredis": "^5.x",
+    "pg": "^8.x",
+    "axios": "^1.x"
+  },
+  "peerDependenciesMeta": {
+    "express": { "optional": true },
+    "mongodb": { "optional": true },
+    "ioredis": { "optional": true },
+    "pg": { "optional": true },
+    "axios": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

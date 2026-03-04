@@ -1,0 +1,14 @@
+{
+  "name": "replayly-example-express",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "@replayly/sdk": "file:../../packages/sdk"
+  }
+}

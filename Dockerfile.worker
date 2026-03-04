@@ -1,0 +1,15 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+# Generate only OpenSSL 3 engine in Alpine (avoids defaulting to 1.1.x when detection fails)
+RUN sed -i 's/"native", "linux-musl-arm64-openssl-3.0.x"/"linux-musl-arm64-openssl-3.0.x"/' prisma/schema.prisma && npx prisma generate
+
+# Force Prisma to use OpenSSL 3 engine at runtime (Alpine fails to detect OpenSSL and defaults to 1.1.x)
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/node_modules/.prisma/client/libquery_engine-linux-musl-arm64-openssl-3.0.x.so.node
+
+CMD ["npx", "tsx", "workers/event-processor/index.ts"]

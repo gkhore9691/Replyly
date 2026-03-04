@@ -1,0 +1,21 @@
+{
+  "name": "@replayly/nextjs",
+  "version": "1.0.0",
+  "description": "Replayly integration for Next.js (App Router)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0",
+    "@replayly/sdk": "^0.1.0"
+  },
+  "devDependencies": {
+    "@replayly/sdk": "file:../sdk",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
