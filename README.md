@@ -1,94 +1,44 @@
-# Replayly
+# Replyly — Distributed Backend Debugging Tool
 
-Distributed backend debugging platform — capture production request lifecycles and replay them locally.
+HTTP request capture, inspection, and replay tool for distributed Node.js backends.
+Debug production issues by replaying exact requests against any environment.
 
-## Phase 1: Foundation
+🔗 **Status:** Active development
 
-This project includes:
+## 🧠 The Problem
 
-- **Next.js 14** (App Router) with TypeScript
-- **Docker Compose** for PostgreSQL, MongoDB, Redis, MinIO, OpenSearch
-- **Authentication**: email/password, JWT, HTTP-only cookies
-- **Multi-tenant**: Organizations and Projects with API key scoping
-- **Dashboard**: shadcn/ui, sidebar, project settings, API key management
+Reproducing bugs in distributed systems is hard. Replyly captures live HTTP traffic and lets you replay requests against dev, staging, or prod — with full headers, body, and timing intact.
 
-## Setup
+## ✨ Features
 
-### 1. Install dependencies
+- Capture & store incoming HTTP requests with full metadata
+- Replay any request against any target environment
+- Request diffing — compare responses across environments
+- Real-time request stream via WebSockets
+- Distributed agent architecture — deploy alongside any Node.js service
+- Redis-backed queue for high-throughput capture
+- Dashboard for request inspection and replay management
 
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Node.js, TypeScript |
+| Queue | Redis |
+| Real-time | WebSockets |
+| Frontend | Next.js, TypeScript |
+| Architecture | Distributed agents + central collector |
+
+## 🚀 Getting Started
 ```bash
 npm install
-```
-
-### 2. Environment
-
-```bash
-cp .env.example .env.local
-# Set JWT_SECRET (e.g. openssl rand -base64 32)
-```
-
-### 3. Start infrastructure
-
-```bash
-docker-compose up -d
-# Wait for services: docker-compose ps
-```
-
-### 4. Database
-
-```bash
-npx prisma generate
-npx prisma migrate deploy
-# Optional: npm run db:seed
-```
-
-### 5. Run the app
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Sign up, create an organization and project, then create an API key.
+## 🗺 Roadmap
 
-## Phase 3: Ingestion & Event Processing
-
-- **Ingestion API**: `POST /api/ingest` — accepts batched events from the SDK (header: `x-replayly-api-key`). Validates API key, rate-limits per project, enqueues events to BullMQ.
-- **Event worker**: Run `npm run worker` (or start the `worker` service via Docker Compose) to process the queue: store payloads in MinIO, metadata in MongoDB, analytics in PostgreSQL, and index in OpenSearch.
-- **Health**: `GET /api/health` — returns status of Postgres, MongoDB, Redis, and queue metrics.
-
-## Phase 8: Real-time & Alerting
-
-- **WebSocket server**: Run `npm run ws` (default port 3001) for real-time event streaming. Set `NEXT_PUBLIC_WS_URL=ws://localhost:3001` and optionally `WS_PORT`.
-- **Dashboard live mode**: On the project overview, use "Live on" to stream events in real time (requires WS server running).
-- **CLI tail**: `replayly tail -p <projectId>` streams live events (requires WS server and `REPLAYLY_WS_URL`).
-- **Alerts**: Create rules under **Settings → Manage Alerts**. Run `npm run worker:alerts` and `npm run worker:notifications` for evaluation and delivery.
-- **Env**: `RESEND_API_KEY` and `RESEND_FROM_EMAIL` for email alerts; channel config (webhook URLs, etc.) is per rule.
-
-## Scripts
-
-- `npm run dev` — Start Next.js dev server
-- `npm run build` — Production build
-- `npm run worker` — Start the event processor worker (run after infra is up)
-- `npm run worker:alerts` — Start the alert evaluation worker
-- `npm run worker:notifications` — Start the notification delivery worker
-- `npm run ws` — Start the WebSocket server for real-time streaming (port 3001)
-- `npm run db:migrate` — Run Prisma migrations (interactive)
-- `npm run db:studio` — Open Prisma Studio
-- `npm run db:seed` — Seed demo user (demo@replayly.dev / demo123456)
-- `npm run build:sdk` — Build the SDK package
-
-## Environment variables
-
-See `.env.example`. Required for local dev:
-
-- `DATABASE_URL` — PostgreSQL connection string
-- `JWT_SECRET` — Secret for signing JWTs
-- `MONGODB_URI` — MongoDB connection string
-- `REDIS_URL` — Redis connection string (queue and rate limiting)
-- `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_REGION` — MinIO (S3-compatible) for raw payload storage
-- `OPENSEARCH_URL` — OpenSearch for event search indexing
-
-Optional for Phase 8:
-
-- `WS_PORT`, `NEXT_PUBLIC_WS_URL` — WebSocket server for real-time
-- `RESEND_API_KEY`, `RESEND_FROM_EMAIL` — Email alerts (Resend)
+- [x] HTTP request capture agent
+- [x] Replay engine
+- [ ] Response diffing
+- [ ] Distributed tracing integration
+- [ ] Kafka support for high-volume streams
